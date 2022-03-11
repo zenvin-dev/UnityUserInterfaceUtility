@@ -1,3 +1,4 @@
+using UIController = Zenvin.UI.UserInterfaceControllerBase;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace Zenvin.UI {
 		private UserInterfaceControllerBase controller;
 
 		private UserInterfaceWidget parent;
-		private Dictionary<string, UserInterfaceWidget> children = new Dictionary<string, UserInterfaceWidget>();
+		private Dictionary<string, WidgetGroup> children = new Dictionary<string, WidgetGroup>();
 
 		[SerializeField, Tooltip ("The identifier with which the widget will register itself in the parent controller.")]
 		private string identifier;
@@ -26,16 +27,22 @@ namespace Zenvin.UI {
 			}
 		}
 		/// <summary> Returns whether this Widget has a valid <see cref="ID"/>. </summary>
-		public bool Valid => !string.IsNullOrEmpty (ID);
+		public bool Valid => !string.IsNullOrEmpty (ID) && !ID.Contains (UIController.PathSeparator.ToString ()) && !ID.Contains (UIController.IndexSeparator.ToString ());
+
+		public UIController Controller => controller;
 		public UserInterfaceWidget Parent => parent;
+		public bool HasParentControl => Parent != null || Controller != null;
 
 
 		private void OnEnable () {
 			if (!Valid) {
 				return;
 			}
+			if (parent != null || controller != null) {
+				return;
+			}
 
-			GetParentControl ();
+			FindParentControl ();
 			if (controller != null) {
 				controller.Register (this);
 			}
@@ -46,12 +53,35 @@ namespace Zenvin.UI {
 				controller.Unregister (this);
 			}
 			if (parent != null) {
-				parent.RemoveChild (identifier);
+				parent.RemoveChild (this);
 			}
 		}
 
+
 		public bool TryGetChildWidget (string identifier, out UserInterfaceWidget widget) {
-			return children.TryGetValue (identifier, out widget);
+			if (children.TryGetValue (identifier, out WidgetGroup group)) {
+				widget = group.First;
+				return widget != null;
+			}
+			widget = null;
+			return false;
+		}
+
+		public bool TryGetChildWidget (string identifier, int index, out UserInterfaceWidget widget) {
+			if (children.TryGetValue (identifier, out WidgetGroup group)) {
+				widget = group[index];
+				return widget != null;
+			}
+			widget = null;
+			return false;
+		}
+
+		public bool TryGetAllChildWidgets (string identifier, out WidgetGroup widgetGroup) {
+			if (children.TryGetValue (identifier, out widgetGroup)) {
+				return true;
+			}
+			widgetGroup = null;
+			return false;
 		}
 
 		public bool TryGetChildWidgetByPath (string path, out UserInterfaceWidget widget) {
@@ -67,7 +97,7 @@ namespace Zenvin.UI {
 
 			UserInterfaceWidget current = this;
 			for (int i = 0; i < path.Length; i++) {
-				if (!current.children.TryGetValue (parts[i], out current)) {
+				if (!current.children.TryGetValue (parts[i], out WidgetGroup group) || !group.TryGetFirst (out current)) {
 					return false;
 				}
 			}
@@ -78,7 +108,16 @@ namespace Zenvin.UI {
 
 		public bool TryGetChildComponent<T> (string identifier, out T value) where T : Component {
 			value = null;
-			if (children == null || !children.TryGetValue (identifier, out UserInterfaceWidget widget)) {
+			if (children == null || !children.TryGetValue (identifier, out WidgetGroup group) || !group.TryGetFirst (out UserInterfaceWidget widget)) {
+				return false;
+			}
+			value = widget.GetComponent<T> ();
+			return value != null;
+		}
+
+		public bool TryGetChildComponent<T> (string identifier, int index, out T value) where T : Component {
+			value = null;
+			if (children == null || !children.TryGetValue (identifier, out WidgetGroup group) || !group.TryGet (index, out UserInterfaceWidget widget)) {
 				return false;
 			}
 			value = widget.GetComponent<T> ();
@@ -94,7 +133,8 @@ namespace Zenvin.UI {
 			return value != null;
 		}
 
-		private void GetParentControl () {
+
+		private void FindParentControl () {
 			if (controller != null)
 				return;
 
@@ -120,14 +160,23 @@ namespace Zenvin.UI {
 				return;
 
 			if (children == null) {
-				children = new Dictionary<string, UserInterfaceWidget> ();
+				children = new Dictionary<string, WidgetGroup> ();
 			}
 
-			children.Add (widget.ID, widget);
+			if (children.TryGetValue (widget.ID, out WidgetGroup group)) {
+				group.Add (widget);
+			} else {
+				group = new WidgetGroup (widget);
+				children.Add (widget.ID, group);
+			}
 		}
 
-		private void RemoveChild (string identifier) {
-			children?.Remove (identifier);
+		private void RemoveChild (UserInterfaceWidget widget) {
+			if (children.TryGetValue (widget.identifier, out WidgetGroup group)) {
+				if (group.Remove (widget, out bool empty) && empty) {
+					children.Remove (widget.identifier);
+				}
+			}
 		}
 
 	}

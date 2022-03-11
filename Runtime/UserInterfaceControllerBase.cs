@@ -7,12 +7,15 @@ namespace Zenvin.UI {
 	/// A base class for custom UI Controllers.<br></br>
 	/// Contains functionality for managing and interacting with <see cref="UserInterfaceWidget"/>s.
 	/// </summary>
-	public abstract class UserInterfaceControllerBase : MonoBehaviour {
+	[DisallowMultipleComponent]
+	public abstract class UserInterfaceControllerBase : MonoBehaviour, IEnumerable<WidgetGroup> {
 
 		public const char PathSeparator = '/';
 		internal static readonly string[] PathSplitValues = new string[] { PathSeparator.ToString () };
+		public const char IndexSeparator = '|';
+		internal static readonly string[] IndexSplitValues = new string[] { IndexSeparator.ToString () };
 
-		private Dictionary<string, UserInterfaceWidget> elements = new Dictionary<string, UserInterfaceWidget> ();
+		private Dictionary<string, WidgetGroup> elements = new Dictionary<string, WidgetGroup> ();
 
 
 		private void Start () {
@@ -23,8 +26,8 @@ namespace Zenvin.UI {
 
 
 		public bool TryGetByID<T> (string identifier, out T reference) where T : Component {
-			if (elements.TryGetValue (identifier, out UserInterfaceWidget uiRef)) {
-				reference = uiRef.GetComponent<T> ();
+			if (elements.TryGetValue (identifier, out WidgetGroup uiRef) && uiRef.TryGetFirst (out UserInterfaceWidget wid)) {
+				reference = wid.GetComponent<T> ();
 				return reference != null;
 			}
 
@@ -39,29 +42,27 @@ namespace Zenvin.UI {
 			return null;
 		}
 
-		public bool TryGetByPath<T> (string path, out T reference) where T : Component {
+		public bool TryGetComponentByPath<T> (string path, out T reference) where T : Component {
 			if (string.IsNullOrEmpty (path)) {
-				Debug.Log ("Invalid Path");
 				reference = null;
 				return false;
 			}
 
 			string[] split = path.Split (PathSplitValues, System.StringSplitOptions.RemoveEmptyEntries);
 			if (split.Length < 2) {
-				Debug.Log ("Simplistic Path");
 				return TryGetByID (split[0], out reference);
 			}
 
+			PathPartSplit (split[0], out string singlePart, out int widgetIndex);
 			UserInterfaceWidget current;
-			if (!elements.TryGetValue (split[0], out current)) {
-				Debug.Log ($"No Widget '{split[0]}' found.");
+			if (!elements.TryGetValue (singlePart, out WidgetGroup group) || !group.TryGet (widgetIndex, out current)) {
 				reference = null;
 				return false;
 			}
 
 			for (int i = 1; i < split.Length; i++) {
-				if (!current.TryGetChildComponent (split[i], out current)) {
-					Debug.Log ($"No Child Widget '{split[i]}' found.");
+				PathPartSplit (split[i], out singlePart, out widgetIndex);
+				if (!current.TryGetChildComponent (singlePart, widgetIndex, out current)) {
 					reference = null;
 					return false;
 				}
@@ -72,7 +73,7 @@ namespace Zenvin.UI {
 		}
 
 		public T GetByPath<T> (string path) where T : Component {
-			if (TryGetByPath (path, out T reference)) {
+			if (TryGetComponentByPath (path, out T reference)) {
 				return reference;
 			}
 			return null;
@@ -81,14 +82,18 @@ namespace Zenvin.UI {
 
 		internal void Register (UserInterfaceWidget reference) {
 			if (elements == null) {
-				elements = new Dictionary<string, UserInterfaceWidget> ();
+				elements = new Dictionary<string, WidgetGroup> ();
 			}
 
 			if (reference == null || !reference.Valid)
 				return;
 
-			if (!elements.ContainsKey (reference.ID)) {
-				elements.Add (reference.ID, reference);
+			if (elements.TryGetValue (reference.ID, out WidgetGroup group)) {
+				group.Add (reference);
+			} else {
+				group = new WidgetGroup ();
+				group.Add (reference);
+				elements[reference.ID] = group;
 			}
 		}
 
@@ -97,46 +102,40 @@ namespace Zenvin.UI {
 				return;
 
 
-			if (elements.TryGetValue (reference.ID, out UserInterfaceWidget comp) && reference == comp) {
-				elements.Remove (reference.ID);
+			if (elements.TryGetValue (reference.ID, out WidgetGroup comp)) {
+				if (comp.Remove (reference, out bool empty) && empty) {
+					elements.Remove (reference.ID);
+				}
 			}
 		}
 
 
-		/// <summary>
-		/// A helper class for grouping <see cref="UserInterfaceWidget"/>s with the same identifier.
-		/// </summary>
-		public class WidgetGroup {
-
-			private readonly List<UserInterfaceWidget> widgets = new List<UserInterfaceWidget> ();
-
-
-			public int Count => widgets.Count;
-			public UserInterfaceWidget this[int index] => index >= 0 && index < Count ? widgets[index] : null;
-
-
-			public void Add (UserInterfaceWidget widget) {
-				if (widget == null) {
-					return;
-				}
-				widgets.Add (widget);
+		internal static void PathPartSplit (string value, out string part, out int index) {
+			if (value == null || value.Length == 0 || !value.Contains (IndexSeparator.ToString ())) {
+				part = value;
+				index = 0;
+				return;
 			}
 
-			public bool Remove (UserInterfaceWidget widget, out bool empty) {
-				bool rem = widgets.Remove (widget);
-				empty = Count == 0;
-				return rem;
+			string[] parts = value.Split (IndexSplitValues, System.StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length != 2) {
+				part = value;
+				index = 0;
+				return;
 			}
-
-
-			public static implicit operator UserInterfaceWidget (WidgetGroup group) {
-				if (group == null) {
-					return null;
-				}
-				return group[0];
+			if (!int.TryParse (parts[1], out index)) {
+				index = 0;
 			}
-
+			part = parts[0];
 		}
 
+
+		public IEnumerator<WidgetGroup> GetEnumerator () {
+			return elements.Values.GetEnumerator ();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator () {
+			return GetEnumerator ();
+		}
 	}
 }

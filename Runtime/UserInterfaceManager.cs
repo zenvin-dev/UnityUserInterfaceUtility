@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Collections;
 
 namespace Zenvin.UI {
 	/// <summary>
@@ -9,7 +10,7 @@ namespace Zenvin.UI {
 	/// The <see cref="UserInterfaceManager"/> does <b>not</b> implement a singleton functionality!
 	/// </summary>
 	[DisallowMultipleComponent]
-	public class UserInterfaceManager : MonoBehaviour {
+	public class UserInterfaceManager : MonoBehaviour, IEnumerable<UserInterfaceControllerBase> {
 
 		private Dictionary<Type, UserInterfaceControllerBase> controllers = new Dictionary<Type, UserInterfaceControllerBase> ();
 
@@ -85,5 +86,12 @@ namespace Zenvin.UI {
 			}
 		}
 
+		public IEnumerator<UserInterfaceControllerBase> GetEnumerator () {
+			return controllers.Values.GetEnumerator ();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator () {
+			return GetEnumerator ();
+		}
 	}
 }
