@@ -1,6 +1,6 @@
 {
     "name": "com.zenvin.unity-ui-utility",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "displayName": "Unity UI Utility",
     "description": "Adds components and helper methods to make working with UI more flexible.",
     "unity": "2018.3",
