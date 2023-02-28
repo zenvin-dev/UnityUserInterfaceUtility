@@ -9,15 +9,19 @@ namespace Zenvin.UI {
 
 		private readonly List<UserInterfaceWidget> widgets = new List<UserInterfaceWidget> ();
 
-
+		public string Identifier { get; internal set; }
 		public int Count => widgets.Count;
 		public UserInterfaceWidget this[int index] => index >= 0 && index < Count ? widgets[index] : null;
 		public UserInterfaceWidget First => widgets.Count > 0 ? widgets[0] : null;
 
 
-		internal WidgetGroup () { }
+		private WidgetGroup () { }
 
-		internal WidgetGroup (params UserInterfaceWidget[] widgets) {
+		internal WidgetGroup (string identifier) {
+			Identifier = identifier;
+		}
+
+		internal WidgetGroup (string identifier, params UserInterfaceWidget[] widgets) : this (identifier) {
 			this.widgets = new List<UserInterfaceWidget> (widgets);
 		}
 

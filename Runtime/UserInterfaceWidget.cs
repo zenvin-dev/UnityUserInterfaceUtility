@@ -1,20 +1,38 @@
-using UIController = Zenvin.UI.UserInterfaceControllerBase;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Zenvin.UI.UserInterfaceManager;
+using UIController = Zenvin.UI.UserInterfaceController;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo ("Zenvin.UI.Editor")]
 
 namespace Zenvin.UI {
 	[DisallowMultipleComponent, DefaultExecutionOrder (-10)]
-	public class UserInterfaceWidget : MonoBehaviour {
+	public class UserInterfaceWidget : MonoBehaviour, IEnumerable<WidgetGroup> {
 
-		private UserInterfaceControllerBase controller;
+		public enum RegisterPolicy {
+			OnEnable,
+			OnAwake,
+			OnStart,
+			Manual,
+		}
+
+		public enum UnregisterPolicy {
+			OnDisable,
+			OnDestroy,
+		}
+
+		private UIController controller;
 
 		private UserInterfaceWidget parent;
-		private Dictionary<string, WidgetGroup> children = new Dictionary<string, WidgetGroup>();
+		private Dictionary<string, WidgetGroup> children = new Dictionary<string, WidgetGroup> ();
 
 		[SerializeField, Tooltip ("The identifier with which the widget will register itself in the parent controller.")]
 		private string identifier;
+		[SerializeField]
+		private RegisterPolicy registerPolicy = RegisterPolicy.OnEnable;
+		[SerializeField]
+		private UnregisterPolicy unregisterPolicy = UnregisterPolicy.OnDisable;
 
 
 		/// <summary> The identifier with which the Widget will register itself to the parent control. </summary>
@@ -32,28 +50,36 @@ namespace Zenvin.UI {
 		public UIController Controller => controller;
 		public UserInterfaceWidget Parent => parent;
 		public bool HasParentControl => Parent != null || Controller != null;
+		public int ChildCount => children.Count;
 
 
 		private void OnEnable () {
-			if (!Valid) {
-				return;
+			if (registerPolicy == RegisterPolicy.OnEnable) {
+				Register ();
 			}
-			if (parent != null || controller != null) {
-				return;
-			}
+		}
 
-			FindParentControl ();
-			if (controller != null) {
-				controller.Register (this);
+		private void Awake () {
+			if (registerPolicy == RegisterPolicy.OnAwake) {
+				Register ();
+			}
+		}
+
+		private void Start () {
+			if (registerPolicy == RegisterPolicy.OnStart) {
+				Register ();
 			}
 		}
 
 		private void OnDisable () {
-			if (controller != null) {
-				controller.Unregister (this);
+			if (unregisterPolicy == UnregisterPolicy.OnDisable) {
+				Unregister ();
 			}
-			if (parent != null) {
-				parent.RemoveChild (this);
+		}
+
+		private void OnDestroy () {
+			if (unregisterPolicy == UnregisterPolicy.OnDestroy) {
+				Unregister ();
 			}
 		}
 
@@ -90,7 +116,7 @@ namespace Zenvin.UI {
 				return false;
 			}
 
-			string[] parts = path.Split (UserInterfaceControllerBase.PathSplitValues, System.StringSplitOptions.RemoveEmptyEntries);
+			string[] parts = path.Split (UserInterfaceController.PathSplitValues, System.StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length == 1) {
 				return TryGetChildWidget (parts[0], out widget);
 			}
@@ -106,7 +132,7 @@ namespace Zenvin.UI {
 			return true;
 		}
 
-		public bool TryGetChildComponent<T> (string identifier, out T value) where T : Component {
+		public bool TryGetChildComponentByID<T> (string identifier, out T value) where T : Component {
 			value = null;
 			if (children == null || !children.TryGetValue (identifier, out WidgetGroup group) || !group.TryGetFirst (out UserInterfaceWidget widget)) {
 				return false;
@@ -115,7 +141,7 @@ namespace Zenvin.UI {
 			return value != null;
 		}
 
-		public bool TryGetChildComponent<T> (string identifier, int index, out T value) where T : Component {
+		public bool TryGetChildComponentByID<T> (string identifier, int index, out T value) where T : Component {
 			value = null;
 			if (children == null || !children.TryGetValue (identifier, out WidgetGroup group) || !group.TryGet (index, out UserInterfaceWidget widget)) {
 				return false;
@@ -125,7 +151,7 @@ namespace Zenvin.UI {
 		}
 
 		public bool TryGetChildComponentByPath<T> (string path, out T value) where T : Component {
-			if (!TryGetChildWidgetByPath(path, out UserInterfaceWidget widget)) {
+			if (!TryGetChildWidgetByPath (path, out UserInterfaceWidget widget)) {
 				value = null;
 				return false;
 			}
@@ -134,12 +160,95 @@ namespace Zenvin.UI {
 		}
 
 
+		private void Register () {
+			if (!Valid) {
+				return;
+			}
+			if (parent != null || controller != null) {
+				return;
+			}
+
+			FindParentControl ();
+			if (controller != null) {
+				controller.Register (this);
+				return;
+			}
+			Log ($"Could not register widget {ToString ()}, because no controller was found.");
+		}
+
+		private void Unregister () {
+			if (controller != null) {
+				controller.Unregister (this);
+			}
+			if (parent != null) {
+				parent.RemoveChild (this);
+			}
+		}
+
+		internal void ForceParentControl (UIController parent, bool forceRegisterChildren = true) {
+			if (!Valid) {
+				return;
+			}
+			if (parent != null || controller != null) {
+				return;
+			}
+			if (parent == null) {
+				return;
+			}
+
+			controller = parent;
+			parent.Register (this);
+			if (forceRegisterChildren) {
+				ForceRegisterChildren ();
+			}
+		}
+
+		private void ForceRegisterChildren () {
+
+			Stack<Transform> widgets = new Stack<Transform> ();
+			widgets.Push (transform);
+
+			do {
+
+				Transform child = widgets.Pop ();
+				if (child.TryGetComponent (out UserInterfaceWidget wid)) {
+					wid.ForceParentControl (this);
+				}
+
+				if (child.childCount == 0) {
+					continue;
+				}
+
+				foreach (Transform t in child) {
+					widgets.Push (t);
+				}
+
+			} while (widgets.Count > 0);
+
+		}
+
+		private void ForceParentControl (UserInterfaceWidget parentWidget) {
+			if (!Valid) {
+				return;
+			}
+			if (parent != null || controller != null) {
+				return;
+			}
+			if (parentWidget == null) {
+				return;
+			}
+
+			parent = parentWidget;
+			parent.AddChild (this);
+		}
+
+
 		private void FindParentControl () {
 			if (controller != null)
 				return;
 
 			Transform current = transform;
-			
+
 			do {
 
 				if (current.TryGetComponent (out controller)) {
@@ -166,7 +275,7 @@ namespace Zenvin.UI {
 			if (children.TryGetValue (widget.ID, out WidgetGroup group)) {
 				group.Add (widget);
 			} else {
-				group = new WidgetGroup (widget);
+				group = new WidgetGroup (widget.ID, widget);
 				children.Add (widget.ID, group);
 			}
 		}
@@ -177,6 +286,20 @@ namespace Zenvin.UI {
 					children.Remove (widget.identifier);
 				}
 			}
+		}
+
+
+		public IEnumerator<WidgetGroup> GetEnumerator () {
+			return children.Values.GetEnumerator ();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator () {
+			return GetEnumerator ();
+		}
+
+
+		public override string ToString () {
+			return $"\"{identifier}\"";
 		}
 
 	}
