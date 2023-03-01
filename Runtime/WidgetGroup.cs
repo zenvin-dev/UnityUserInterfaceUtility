@@ -23,6 +23,7 @@ namespace Zenvin.UI {
 
 		internal WidgetGroup (string identifier, params UserInterfaceWidget[] widgets) : this (identifier) {
 			this.widgets = new List<UserInterfaceWidget> (widgets);
+			this.widgets.Sort ();
 		}
 
 		public bool TryGetFirst (out UserInterfaceWidget widget) {
@@ -40,6 +41,7 @@ namespace Zenvin.UI {
 				return false;
 			}
 			widgets.Add (widget);
+			widgets.Sort ();
 			return true;
 		}
 

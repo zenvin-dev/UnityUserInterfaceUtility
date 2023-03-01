@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,7 +9,7 @@ using UIController = Zenvin.UI.UserInterfaceController;
 
 namespace Zenvin.UI {
 	[DisallowMultipleComponent, DefaultExecutionOrder (-10)]
-	public class UserInterfaceWidget : MonoBehaviour, IEnumerable<WidgetGroup> {
+	public class UserInterfaceWidget : MonoBehaviour, IEnumerable<WidgetGroup>, IComparable<UserInterfaceWidget> {
 
 		public enum RegisterPolicy {
 			OnEnable,
@@ -33,6 +34,8 @@ namespace Zenvin.UI {
 		private RegisterPolicy registerPolicy = RegisterPolicy.OnEnable;
 		[SerializeField]
 		private UnregisterPolicy unregisterPolicy = UnregisterPolicy.OnDisable;
+		[SerializeField]
+		private int order;
 
 
 		/// <summary> The identifier with which the Widget will register itself to the parent control. </summary>
@@ -297,10 +300,16 @@ namespace Zenvin.UI {
 			return GetEnumerator ();
 		}
 
+		int IComparable<UserInterfaceWidget>.CompareTo (UserInterfaceWidget other) {
+			if (other == null) {
+				return 1;
+			}
+			return order.CompareTo (other.order);
+		}
+
 
 		public override string ToString () {
 			return $"\"{identifier}\"";
 		}
-
 	}
 }
