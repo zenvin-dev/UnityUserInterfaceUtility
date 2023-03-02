@@ -4,9 +4,7 @@ using UnityEngine;
 namespace Zenvin.UI {
 	[CustomEditor (typeof (UserInterfaceWidget), false), CanEditMultipleObjects]
 	internal class UserInterfaceWidgetEditor : Editor {
-		//private void OnEnable () {
-		//	(target as UserInterfaceWidget).hideFlags = HideFlags.HideInInspector;
-		//}
+		
 	}
 
 	[InitializeOnLoad]

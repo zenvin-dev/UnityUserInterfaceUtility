@@ -34,6 +34,8 @@ namespace Zenvin.UI {
 		private RegisterPolicy registerPolicy = RegisterPolicy.OnEnable;
 		[SerializeField]
 		private UnregisterPolicy unregisterPolicy = UnregisterPolicy.OnDisable;
+		[SerializeField, Tooltip ("Determines sort order based on sibling index, instead of using the value set in the editor.")]
+		private bool useAutoOrder;
 		[SerializeField]
 		private int order;
 
@@ -49,6 +51,8 @@ namespace Zenvin.UI {
 		}
 		/// <summary> Returns whether this Widget has a valid <see cref="ID"/>. </summary>
 		public bool Valid => !string.IsNullOrEmpty (ID) && !ID.Contains (UIController.PathSeparator.ToString ()) && !ID.Contains (UIController.IndexSeparator.ToString ());
+
+		public int Order => useAutoOrder ? transform.GetSiblingIndex () : order;
 
 		public UIController Controller => controller;
 		public UserInterfaceWidget Parent => parent;
@@ -304,7 +308,7 @@ namespace Zenvin.UI {
 			if (other == null) {
 				return 1;
 			}
-			return order.CompareTo (other.order);
+			return Order.CompareTo (other.Order);
 		}
 
 
