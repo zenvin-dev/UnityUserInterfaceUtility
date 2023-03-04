@@ -20,17 +20,21 @@ namespace Zenvin.UI {
 
 
 		private void Start () {
+			bool registered = false;
+
 			if (transform.root.TryGetComponent (out UserInterfaceManager uiManager)) {
-				uiManager.Register (this);
+				registered = uiManager.Register (this);
 			} else {
 				Transform current = transform;
 				while (current != null && uiManager == null) {
 					if (current.TryGetComponent (out uiManager)) {
-						uiManager.Register (this);
+						registered = uiManager.Register (this);
 					}
 					current = current.parent;
 				}
 			}
+
+			OnStart (registered);
 		}
 
 
@@ -143,6 +147,13 @@ namespace Zenvin.UI {
 			}
 			return null;
 		}
+
+		/// <summary>
+		/// Will be called during the default <c>Start</c> Unity message.<br></br>
+		/// <b>Do not declare your own <c>Start</c> method, otherwise the Controller will not attempt to register itself with a <see cref="UserInterfaceManager"/>.</b>
+		/// </summary>
+		/// <param name="registered">Whether the controller successfully registered itself with a <see cref="UserInterfaceManager"/> prior to running this method.</param>
+		protected virtual void OnStart (bool registered) { }
 
 
 		internal void ForceRegisterElements (bool forceWidgets) {
