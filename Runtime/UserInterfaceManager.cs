@@ -9,14 +9,19 @@ namespace Zenvin.UI {
 	/// Controllers will automatically register themselves with the manager on Start.<br></br><br></br>
 	/// The <see cref="UserInterfaceManager"/> does <b>not</b> implement a singleton functionality!
 	/// </summary>
-	[DisallowMultipleComponent, DefaultExecutionOrder(-100)]
+	[DisallowMultipleComponent, DefaultExecutionOrder (-100)]
 	public class UserInterfaceManager : MonoBehaviour, IEnumerable<UserInterfaceController> {
 
 		private static bool log;
 
-		private Dictionary<Type, UserInterfaceController> controllers = new Dictionary<Type, UserInterfaceController> ();
+		private readonly Dictionary<Type, UserInterfaceController> controllers = new Dictionary<Type, UserInterfaceController> ();
 
 		[SerializeField] private bool debugLog = false;
+
+		/// <summary>
+		/// The number of registered <see cref="UserInterfaceController"/>s.
+		/// </summary>
+		public int ControllerCount => controllers.Count;
 
 
 		private void Awake () {
@@ -30,16 +35,21 @@ namespace Zenvin.UI {
 		/// </summary>
 		/// <typeparam name="T"> The type of controller to look for. </typeparam>
 		public bool TryGetController<T> (out T controller) where T : UserInterfaceController {
+			Type t = typeof (T);
+
 			if (controllers == null) {
+				InstanceLog ($"Trying to get Controller of type \"{t.FullName}\". Error: Dictionary is null.");
 				controller = null;
 				return false;
 			}
 
 			if (controllers.TryGetValue (typeof (T), out UserInterfaceController ctrl)) {
+				InstanceLog ($"Trying to get Controller of type \"{t.FullName}\". Success: Found {ctrl}");
 				controller = ctrl as T;
 				return true;
 			}
 
+			InstanceLog ($"Trying to get Controller of type \"{t.FullName}\". Fail: Did not find controller matching the given type.");
 			controller = null;
 			return false;
 		}
@@ -77,7 +87,7 @@ namespace Zenvin.UI {
 				return;
 			}
 
-			if (parent.TryGetComponent(out UserInterfaceController ctrl)) {
+			if (parent.TryGetComponent (out UserInterfaceController ctrl)) {
 				if (Register (ctrl) && forceWidgets) {
 					ctrl.ForceRegisterElements (forceWidgets);
 				}
@@ -91,16 +101,16 @@ namespace Zenvin.UI {
 
 
 		internal bool Register<T> (T controller) where T : UserInterfaceController {
-			if (controllers == null) {
-				controllers = new Dictionary<Type, UserInterfaceController> ();
-			}
+			//if (controllers == null) {
+			//	controllers = new Dictionary<Type, UserInterfaceController> ();
+			//}
 
 			if (controller == null) {
 				Log ("Cannot register controller <NULL>.");
 				return false;
 			}
 
-			Type controllerType = typeof (T);
+			Type controllerType = controller.GetType ();
 			if (!controllers.ContainsKey (controllerType)) {
 				controllers.Add (controllerType, controller);
 				Log ($"Registered controller {controller}.");
@@ -126,12 +136,24 @@ namespace Zenvin.UI {
 			Log ($"Did not unregister controller {controller}, as it was not registered.");
 		}
 
+		internal void InstanceLog (string message) {
+			if (debugLog) {
+				Debug.Log ("[UI] " + message);
+			}
+		}
+
 		internal static void Log (string message) {
 			if (log) {
 				Debug.Log ("[UI] " + message);
 			}
 		}
 
+
+		internal IEnumerator<KeyValuePair<Type, UserInterfaceController>> GetRawEnumerator () {
+			foreach (var kvp in controllers) {
+				yield return kvp;
+			}
+		}
 
 		public IEnumerator<UserInterfaceController> GetEnumerator () {
 			return controllers.Values.GetEnumerator ();

@@ -42,9 +42,12 @@ namespace Zenvin.UI {
 
 			EditorGUILayout.LabelField ("UI Manager - Registered Controllers", EditorStyles.boldLabel);
 			EditorGUI.indentLevel++;
-			foreach (var ctrl in target) {
-				EditorGUILayout.LabelField (ctrl.ToString ());
+
+			var raw = target.GetRawEnumerator ();
+			while (raw.MoveNext ()) {
+				EditorGUILayout.LabelField (raw.Current.Value.name + " (" + raw.Current.Key.FullName + ")");
 			}
+
 			EditorGUI.indentLevel--;
 
 			if (wantsRedraw) {

@@ -180,7 +180,6 @@ namespace Zenvin.UI {
 				controller.Register (this);
 				return;
 			}
-			Log ($"Could not register widget {ToString ()}, because no controller was found.");
 		}
 
 		private void Unregister () {

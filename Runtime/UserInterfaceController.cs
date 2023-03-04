@@ -8,7 +8,7 @@ namespace Zenvin.UI {
 	/// A base class for custom UI Controllers.<br></br>
 	/// Contains functionality for managing and interacting with <see cref="UserInterfaceWidget"/>s.
 	/// </summary>
-	[DisallowMultipleComponent]
+	[DisallowMultipleComponent, DefaultExecutionOrder(-90)]
 	public class UserInterfaceController : MonoBehaviour, IEnumerable<WidgetGroup> {
 
 		public const char PathSeparator = '/';
