@@ -21,6 +21,9 @@ namespace Zenvin.UI.Components.Grid {
 
 
 		public Rect GetRect (Vector2Int cell, Vector2Int span) {
+			if (columnSizes == null || rowSizes == null) {
+				UpdateGrid ();
+			}
 			if (cell.x < 0 || cell.x >= columnSizes.Length || cell.y < 0 || cell.y >= rowSizes.Length || span.x <= 0 || span.y <= 0) {
 				return new Rect ();
 			}
