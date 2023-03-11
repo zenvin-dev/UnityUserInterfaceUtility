@@ -172,7 +172,7 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < rows.Count; i++) {
 				switch (rows[i].Unit) {
 					case CellSizeUnit.Fixed:
-						totalSize.x -= rows[i].Height;
+						totalSize.y -= rows[i].Height;
 						rowSizes[i] = rows[i].Height;
 						break;
 					case CellSizeUnit.Remaining:
@@ -189,7 +189,7 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < rows.Count; i++) {
 				if (rows[i].Unit == CellSizeUnit.Remaining) {
 					float height = rows[i].Height / relativeTotal;
-					rowSizes[i] = height * totalSize.x;
+					rowSizes[i] = height * totalSize.y;
 				}
 			}
 		}
