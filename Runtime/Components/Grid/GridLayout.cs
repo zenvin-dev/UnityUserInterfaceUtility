@@ -79,30 +79,30 @@ namespace Zenvin.UI.Components.Grid {
 				return;
 			}
 
-			int relativeColumns = 0;
+			int relativeRows = 0;
 			float relativeTotal = 0f;
 
 			for (int i = 0; i < rows.Count; i++) {
 				switch (rows[i].Unit) {
 					case CellSizeUnit.Fixed:
 						totalSize.x -= rows[i].Height;
-						columnSizes[i] = rows[i].Height;
+						rowSizes[i] = rows[i].Height;
 						break;
 					case CellSizeUnit.Remaining:
-						relativeColumns++;
+						relativeRows++;
 						relativeTotal += rows[i].Height;
 						break;
 				}
 			}
 
-			if (relativeColumns == 0) {
+			if (relativeRows == 0) {
 				return;
 			}
 
 			for (int i = 0; i < rows.Count; i++) {
 				if (rows[i].Unit == CellSizeUnit.Remaining) {
 					float height = rows[i].Height / relativeTotal;
-					columnSizes[i] = height * totalSize.x;
+					rowSizes[i] = height * totalSize.x;
 				}
 			}
 		}
