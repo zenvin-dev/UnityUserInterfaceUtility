@@ -36,10 +36,10 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < cell.y; i++) {
 				position.y += rowSizes[i];
 			}
-			for (int i = cell.x; i < cell.x + span.x; i++) {
+			for (int i = cell.x; i < Mathf.Min(cell.x + span.x, columnSizes.Length); i++) {
 				size.x += columnSizes[i];
 			}
-			for (int i = cell.y; i < cell.y + span.y; i++) {
+			for (int i = cell.y; i < Mathf.Min(cell.y + span.y, rowSizes.Length); i++) {
 				size.y += rowSizes[i];
 			}
 
@@ -64,9 +64,10 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 		private void UpdateGrid () {
-			InitializeArray (ref rowSizes, Mathf.Max (rows.Count, 1));
-			InitializeArray (ref columnSizes, Mathf.Max (columns.Count, 1));
-			Vector2 totalSize = (transform as RectTransform).sizeDelta;
+			InitializeArray (ref rowSizes, Mathf.Max (rows?.Count ?? 0, 1));
+			InitializeArray (ref columnSizes, Mathf.Max (columns?.Count ?? 0, 1));
+			Vector2 totalSize = (transform as RectTransform).rect.size;
+			totalSize.Scale (transform.lossyScale);
 
 			UpdateRowHeights (totalSize);
 			UpdateColumnWidths (totalSize);
