@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.Grid {
 	[DisallowMultipleComponent, ExecuteInEditMode, RequireComponent (typeof (RectTransform))]
-	public sealed class GridLayout : UIBehaviour, ILayoutGroup {
+	public sealed class GridLayout : UIBehaviour {
 
 		public enum CellSizeUnit {
 			Fixed,
@@ -146,14 +145,6 @@ namespace Zenvin.UI.Components.Grid {
 				return;
 			}
 			arr = new T[size];
-		}
-
-		void ILayoutController.SetLayoutHorizontal () {
-			
-		}
-
-		void ILayoutController.SetLayoutVertical () {
-			
 		}
 	}
 
