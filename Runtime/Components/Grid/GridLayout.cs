@@ -19,6 +19,40 @@ namespace Zenvin.UI.Components.Grid {
 		[SerializeField] private List<ColumnDefinition> columns;
 
 
+		public int RowCount => rows.Count;
+		public int ColumnCount => columns.Count;
+
+
+		/// <summary>
+		/// Adds a new column with a given unit and width to the grid.
+		/// Will fail if the given width is equal to or less than 0.
+		/// </summary>
+		public void AddColumn (CellSizeUnit unit, float width) {
+			if (width >= 0) {
+				columns.Add (new ColumnDefinition () { Unit = unit, Width = width });
+				UpdateGrid ();
+				UpdateChildren ();
+			}
+		}
+
+		/// <summary>
+		/// Adds a new row with a given unit and height to the grid.<br></br>
+		/// Will fail if the given height is equal to or less than 0.
+		/// </summary>
+		public void AddRow (CellSizeUnit unit, float height) {
+			if (height >= 0) {
+				rows.Add (new RowDefinition () { Unit = unit, Height = height });
+				UpdateGrid ();
+				UpdateChildren ();
+			}
+		}
+
+		/// <summary>
+		/// Gets a rect corresponding to a given grid cell's position and span.<br></br>
+		/// If the position is outside of the grid's bounds or the span is 0 or less on one or both axes, an empty rect is returned.
+		/// </summary>
+		/// <param name="cell"> The index of the cell's column and row. </param>
+		/// <param name="span"> The number of columns and rows that the cell spans. </param>
 		public Rect GetRect (Vector2Int cell, Vector2Int span) {
 			if (columnSizes == null || rowSizes == null) {
 				UpdateGrid ();
@@ -36,14 +70,72 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < cell.y; i++) {
 				position.y += rowSizes[i];
 			}
-			for (int i = cell.x; i < Mathf.Min(cell.x + span.x, columnSizes.Length); i++) {
+			for (int i = cell.x; i < Mathf.Min (cell.x + span.x, columnSizes.Length); i++) {
 				size.x += columnSizes[i];
 			}
-			for (int i = cell.y; i < Mathf.Min(cell.y + span.y, rowSizes.Length); i++) {
+			for (int i = cell.y; i < Mathf.Min (cell.y + span.y, rowSizes.Length); i++) {
 				size.y += rowSizes[i];
 			}
 
 			return new Rect (position, size);
+		}
+
+		/// <summary>
+		/// Attempts to remove the column at the given index.
+		/// </summary>
+		public bool RemoveColumn (int column) {
+			if (column >= 0 && column < columns.Count) {
+				columns.RemoveAt (column);
+				UpdateGrid ();
+				UpdateChildren ();
+				return true;
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// Attempts to remove the row at the given index.
+		/// </summary>
+		public bool RemoveRow (int row) {
+			if (row >= 0 && row < rows.Count) {
+				rows.RemoveAt (row);
+				UpdateGrid ();
+				UpdateChildren ();
+				return true;
+			}
+			return false;
+		}
+
+		public void SetColumnUnit (int column, CellSizeUnit unit) {
+			if (column >= 0 && column < columns.Count && columns[column].Unit != unit) {
+				columns[column].Unit = unit;
+				UpdateGrid ();
+				UpdateChildren ();
+			}
+		}
+
+		public void SetColumnWidth (int column, float width) {
+			if (column >= 0 && column < columns.Count) {
+				columns[column].Width = width;
+				UpdateGrid ();
+				UpdateChildren ();
+			}
+		}
+
+		public void SetRowUnit (int row, CellSizeUnit unit) {
+			if (row >= 0 && row < rows.Count && rows[row].Unit != unit) {
+				rows[row].Unit = unit;
+				UpdateGrid ();
+				UpdateChildren ();
+			}
+		}
+
+		public void SetRowHeight (int row, float height) {
+			if (row >= 0 && row < rows.Count) {
+				rows[row].Height = height;
+				UpdateGrid ();
+				UpdateChildren ();
+			}
 		}
 
 
@@ -55,12 +147,7 @@ namespace Zenvin.UI.Components.Grid {
 		protected override void OnValidate () {
 			base.OnValidate ();
 			UpdateGrid ();
-
-			foreach (Transform child in transform) {
-				if (child.TryGetComponent (out GridCell cell)) {
-					cell.UpdateCell ();
-				}
-			}
+			UpdateChildren ();
 		}
 
 		private void UpdateGrid () {
@@ -141,6 +228,14 @@ namespace Zenvin.UI.Components.Grid {
 			}
 		}
 
+		private void UpdateChildren () {
+			foreach (Transform child in transform) {
+				if (child.TryGetComponent (out GridCell cell)) {
+					cell.UpdateCell ();
+				}
+			}
+		}
+
 		private void InitializeArray<T> (ref T[] arr, int size) {
 			if (arr != null && arr.Length == size || size < 0) {
 				return;
@@ -151,13 +246,13 @@ namespace Zenvin.UI.Components.Grid {
 
 	[Serializable]
 	public class RowDefinition {
-		[field: SerializeField] public GridLayout.CellSizeUnit Unit { get; private set; }
-		[field: SerializeField, Min (0)] public float Height { get; private set; }
+		[field: SerializeField] public GridLayout.CellSizeUnit Unit { get; internal set; }
+		[field: SerializeField, Min (0)] public float Height { get; internal set; }
 	}
 
 	[Serializable]
 	public class ColumnDefinition {
-		[field: SerializeField] public GridLayout.CellSizeUnit Unit { get; private set; }
-		[field: SerializeField, Min (0)] public float Width { get; private set; }
+		[field: SerializeField] public GridLayout.CellSizeUnit Unit { get; internal set; }
+		[field: SerializeField, Min (0)] public float Width { get; internal set; }
 	}
 }
