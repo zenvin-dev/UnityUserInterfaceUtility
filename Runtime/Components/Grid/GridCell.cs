@@ -3,7 +3,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.Grid {
-	[DisallowMultipleComponent, ExecuteInEditMode, RequireComponent (typeof (RectTransform))]
+	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform))]
 	public sealed class GridCell : UIBehaviour, ILayoutSelfController {
 
 		private GridLayout grid;
@@ -11,7 +11,7 @@ namespace Zenvin.UI.Components.Grid {
 
 		[SerializeField] private Vector2Int position;
 		[SerializeField] private Vector2Int span = Vector2Int.one;
-		[SerializeField] private RectOffset margin = new RectOffset();
+		[SerializeField] private RectOffset margin = new RectOffset ();
 
 		/// <summary> The position of the Cell within its <see cref="GridLayout"/>. </summary>
 		public Vector2Int Position {
@@ -111,25 +111,31 @@ namespace Zenvin.UI.Components.Grid {
 
 
 		public void SetLayoutHorizontal () {
-			if (!TryGetRect (out Rect r) || !TryGetRectTransform (out RectTransform t)) {
+			if (!TryGetRect (out Rect r)) {
 				return;
 			}
-
-			r.x += margin.left;
-			r.width -= margin.horizontal;
-			
-			t.SetInsetAndSizeFromParentEdge (RectTransform.Edge.Left, r.x, r.width);
+			SetLayoutHorizontal (r);
 		}
 
 		public void SetLayoutVertical () {
-			if (!TryGetRect (out Rect r) || !TryGetRectTransform (out RectTransform t)) {
+			if (!TryGetRect (out Rect r)) {
 				return;
 			}
+			SetLayoutVertical (r);
+		}
 
-			r.y += margin.top;
-			r.height -= margin.vertical;
+		internal void SetLayoutHorizontal (Rect rect) {
+			rect.x += margin.left;
+			rect.width -= margin.horizontal;
 
-			t.SetInsetAndSizeFromParentEdge (RectTransform.Edge.Top, r.y, r.height);
+			(transform as RectTransform).SetInsetAndSizeFromParentEdge (RectTransform.Edge.Left, rect.x, rect.width);
+		}
+
+		internal void SetLayoutVertical (Rect rect) {
+			rect.y += margin.top;
+			rect.height -= margin.vertical;
+
+			(transform as RectTransform).SetInsetAndSizeFromParentEdge (RectTransform.Edge.Top, rect.y, rect.height);
 		}
 	}
 }

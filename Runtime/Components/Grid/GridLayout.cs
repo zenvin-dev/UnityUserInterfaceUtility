@@ -2,16 +2,18 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.Grid {
-	[DisallowMultipleComponent, ExecuteInEditMode, RequireComponent (typeof (RectTransform))]
-	public sealed class GridLayout : UIBehaviour {
+	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform))]
+	public sealed class GridLayout : LayoutGroup {
 
 		public enum CellSizeUnit {
 			Fixed,
 			Remaining,
 		}
 
+		private readonly List<Tuple<GridCell, Rect>> childCells = new List<Tuple<GridCell, Rect>> ();
 		private float[] rowSizes;
 		private float[] columnSizes;
 
@@ -139,22 +141,11 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 
-		protected override void OnRectTransformDimensionsChange () {
-			base.OnRectTransformDimensionsChange ();
-			UpdateGrid ();
-		}
-
-		protected override void OnValidate () {
-			base.OnValidate ();
-			UpdateGrid ();
-			UpdateChildren ();
-		}
-
 		private void UpdateGrid () {
 			InitializeArray (ref rowSizes, Mathf.Max (rows?.Count ?? 0, 1));
 			InitializeArray (ref columnSizes, Mathf.Max (columns?.Count ?? 0, 1));
-			Vector2 totalSize = (transform as RectTransform).rect.size;
-			totalSize.Scale (transform.lossyScale);
+
+			Vector2 totalSize = GetRectSize ();
 
 			UpdateRowHeights (totalSize);
 			UpdateColumnWidths (totalSize);
@@ -229,11 +220,11 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 		private void UpdateChildren () {
-			foreach (Transform child in transform) {
-				if (child.TryGetComponent (out GridCell cell)) {
-					cell.UpdateCell ();
-				}
-			}
+			//foreach (Transform child in transform) {
+			//	if (child.TryGetComponent (out GridCell cell)) {
+			//		cell.UpdateCell ();
+			//	}
+			//}
 		}
 
 		private void InitializeArray<T> (ref T[] arr, int size) {
@@ -241,6 +232,42 @@ namespace Zenvin.UI.Components.Grid {
 				return;
 			}
 			arr = new T[size];
+		}
+
+		private Vector2 GetRectSize () {
+			RectTransform rt = transform as RectTransform;
+			Vector2 size = rt.rect.size;
+			size.Scale (rt.lossyScale);
+			return size;
+		}
+
+
+		public override void CalculateLayoutInputVertical () {
+			InitializeArray (ref rowSizes, Mathf.Max (rows?.Count ?? 0, 1));
+			UpdateRowHeights (GetRectSize ());
+		}
+
+		public override void CalculateLayoutInputHorizontal () {
+			InitializeArray (ref columnSizes, Mathf.Max (columns?.Count ?? 0, 1));
+			UpdateColumnWidths (GetRectSize ());
+		}
+
+		public override void SetLayoutHorizontal () {
+			childCells.Clear ();
+			foreach (Transform child in transform) {
+				if (child.TryGetComponent (out GridCell cell)) {
+					var rect = GetRect (cell.Position, cell.Span);
+
+					childCells.Add (new Tuple<GridCell, Rect> (cell, rect));
+					cell.SetLayoutHorizontal (rect);
+				}
+			}
+		}
+
+		public override void SetLayoutVertical () {
+			foreach (var cell in childCells) {
+				cell.Item1.SetLayoutVertical (cell.Item2);
+			}
 		}
 	}
 
