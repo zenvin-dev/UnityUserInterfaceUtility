@@ -33,7 +33,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (width >= 0) {
 				columns.Add (new ColumnDefinition () { Unit = unit, Width = width });
 				UpdateGrid ();
-				UpdateChildren ();
 			}
 		}
 
@@ -45,7 +44,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (height >= 0) {
 				rows.Add (new RowDefinition () { Unit = unit, Height = height });
 				UpdateGrid ();
-				UpdateChildren ();
 			}
 		}
 
@@ -56,10 +54,17 @@ namespace Zenvin.UI.Components.Grid {
 		/// <param name="cell"> The index of the cell's column and row. </param>
 		/// <param name="span"> The number of columns and rows that the cell spans. </param>
 		public Rect GetRect (Vector2Int cell, Vector2Int span) {
-			if (columnSizes == null || rowSizes == null) {
+			return GetRect (cell, span, columnSizes, rowSizes);
+		}
+
+		internal Rect GetRect (Vector2Int cell, Vector2Int span, float[] columnValues, float[] rowValues) {
+			if (columns == null || rows == null) {
+				return new Rect();
+			}
+			if (columnValues == null || rowValues == null) {
 				UpdateGrid ();
 			}
-			if (cell.x < 0 || cell.x >= columnSizes.Length || cell.y < 0 || cell.y >= rowSizes.Length || span.x <= 0 || span.y <= 0) {
+			if (cell.x < 0 || cell.x >= columnValues.Length || cell.y < 0 || cell.y >= rowValues.Length || span.x <= 0 || span.y <= 0) {
 				return new Rect ();
 			}
 
@@ -67,16 +72,16 @@ namespace Zenvin.UI.Components.Grid {
 			Vector2 size = Vector2.zero;
 
 			for (int i = 0; i < cell.x; i++) {
-				position.x += columnSizes[i];
+				position.x += columnValues[i];
 			}
 			for (int i = 0; i < cell.y; i++) {
-				position.y += rowSizes[i];
+				position.y += rowValues[i];
 			}
-			for (int i = cell.x; i < Mathf.Min (cell.x + span.x, columnSizes.Length); i++) {
-				size.x += columnSizes[i];
+			for (int i = cell.x; i < Mathf.Min (cell.x + span.x, columnValues.Length); i++) {
+				size.x += columnValues[i];
 			}
-			for (int i = cell.y; i < Mathf.Min (cell.y + span.y, rowSizes.Length); i++) {
-				size.y += rowSizes[i];
+			for (int i = cell.y; i < Mathf.Min (cell.y + span.y, rowValues.Length); i++) {
+				size.y += rowValues[i];
 			}
 
 			return new Rect (position, size);
@@ -89,7 +94,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (column >= 0 && column < columns.Count) {
 				columns.RemoveAt (column);
 				UpdateGrid ();
-				UpdateChildren ();
 				return true;
 			}
 			return false;
@@ -102,7 +106,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (row >= 0 && row < rows.Count) {
 				rows.RemoveAt (row);
 				UpdateGrid ();
-				UpdateChildren ();
 				return true;
 			}
 			return false;
@@ -112,7 +115,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (column >= 0 && column < columns.Count && columns[column].Unit != unit) {
 				columns[column].Unit = unit;
 				UpdateGrid ();
-				UpdateChildren ();
 			}
 		}
 
@@ -120,7 +122,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (column >= 0 && column < columns.Count) {
 				columns[column].Width = width;
 				UpdateGrid ();
-				UpdateChildren ();
 			}
 		}
 
@@ -128,7 +129,6 @@ namespace Zenvin.UI.Components.Grid {
 			if (row >= 0 && row < rows.Count && rows[row].Unit != unit) {
 				rows[row].Unit = unit;
 				UpdateGrid ();
-				UpdateChildren ();
 			}
 		}
 
@@ -136,24 +136,22 @@ namespace Zenvin.UI.Components.Grid {
 			if (row >= 0 && row < rows.Count) {
 				rows[row].Height = height;
 				UpdateGrid ();
-				UpdateChildren ();
 			}
 		}
 
 
 		private void UpdateGrid () {
-			InitializeArray (ref rowSizes, Mathf.Max (rows?.Count ?? 0, 1));
-			InitializeArray (ref columnSizes, Mathf.Max (columns?.Count ?? 0, 1));
-
 			Vector2 totalSize = GetRectSize ();
 
-			UpdateRowHeights (totalSize);
-			UpdateColumnWidths (totalSize);
+			UpdateRowHeights (totalSize, ref rowSizes);
+			UpdateColumnWidths (totalSize, ref columnSizes);
 		}
 
-		private void UpdateRowHeights (Vector2 totalSize) {
-			if (rows.Count <= 1) {
-				rowSizes[0] = totalSize.y;
+		internal void UpdateRowHeights (Vector2 totalSize, ref float[] values, float scale = 1f) {
+			InitializeArray (ref values, Mathf.Max (rows?.Count ?? 0, 1));
+
+			if (rows == null || rows.Count <= 1) {
+				values[0] = totalSize.y;
 				return;
 			}
 
@@ -163,8 +161,8 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < rows.Count; i++) {
 				switch (rows[i].Unit) {
 					case CellSizeUnit.Fixed:
-						totalSize.y -= rows[i].Height;
-						rowSizes[i] = rows[i].Height;
+						totalSize.y -= rows[i].Height * scale;
+						values[i] = rows[i].Height * scale;
 						break;
 					case CellSizeUnit.Remaining:
 						relativeRows++;
@@ -180,14 +178,16 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < rows.Count; i++) {
 				if (rows[i].Unit == CellSizeUnit.Remaining) {
 					float height = rows[i].Height / relativeTotal;
-					rowSizes[i] = height * totalSize.y;
+					values[i] = height * totalSize.y;
 				}
 			}
 		}
 
-		private void UpdateColumnWidths (Vector2 totalSize) {
-			if (columns.Count <= 1) {
-				columnSizes[0] = totalSize.x;
+		internal void UpdateColumnWidths (Vector2 totalSize, ref float[] values, float scale = 1f) {
+			InitializeArray (ref values, Mathf.Max (columns?.Count ?? 0, 1));
+
+			if (columns == null || columns.Count <= 1) {
+				values[0] = totalSize.x;
 				return;
 			}
 
@@ -197,8 +197,8 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < columns.Count; i++) {
 				switch (columns[i].Unit) {
 					case CellSizeUnit.Fixed:
-						totalSize.x -= columns[i].Width;
-						columnSizes[i] = columns[i].Width;
+						totalSize.x -= columns[i].Width * scale;
+						values[i] = columns[i].Width * scale;
 						break;
 					case CellSizeUnit.Remaining:
 						relativeColumns++;
@@ -214,17 +214,9 @@ namespace Zenvin.UI.Components.Grid {
 			for (int i = 0; i < columns.Count; i++) {
 				if (columns[i].Unit == CellSizeUnit.Remaining) {
 					float width = columns[i].Width / relativeTotal;
-					columnSizes[i] = width * totalSize.x;
+					values[i] = width * totalSize.x;
 				}
 			}
-		}
-
-		private void UpdateChildren () {
-			//foreach (Transform child in transform) {
-			//	if (child.TryGetComponent (out GridCell cell)) {
-			//		cell.UpdateCell ();
-			//	}
-			//}
 		}
 
 		private void InitializeArray<T> (ref T[] arr, int size) {
@@ -234,22 +226,21 @@ namespace Zenvin.UI.Components.Grid {
 			arr = new T[size];
 		}
 
-		private Vector2 GetRectSize () {
+		internal Vector2 GetRectSize () {
 			RectTransform rt = transform as RectTransform;
 			Vector2 size = rt.rect.size;
-			size.Scale (rt.lossyScale);
 			return size;
 		}
 
 
-		public override void CalculateLayoutInputVertical () {
-			InitializeArray (ref rowSizes, Mathf.Max (rows?.Count ?? 0, 1));
-			UpdateRowHeights (GetRectSize ());
+		public override void CalculateLayoutInputHorizontal () {
+			UpdateColumnWidths (GetRectSize (), ref columnSizes);
+			SetLayoutHorizontal ();
 		}
 
-		public override void CalculateLayoutInputHorizontal () {
-			InitializeArray (ref columnSizes, Mathf.Max (columns?.Count ?? 0, 1));
-			UpdateColumnWidths (GetRectSize ());
+		public override void CalculateLayoutInputVertical () {
+			UpdateRowHeights (GetRectSize (), ref rowSizes);
+			SetLayoutVertical ();
 		}
 
 		public override void SetLayoutHorizontal () {
@@ -273,13 +264,19 @@ namespace Zenvin.UI.Components.Grid {
 
 	[Serializable]
 	public class RowDefinition {
-		[field: SerializeField] public GridLayout.CellSizeUnit Unit { get; internal set; }
-		[field: SerializeField, Min (0)] public float Height { get; internal set; }
+		[SerializeField] private GridLayout.CellSizeUnit unit;
+		[SerializeField, Min (0)] private float height;
+
+		public GridLayout.CellSizeUnit Unit { get => unit; internal set => unit = value; }
+		public float Height { get => height; internal set => height = value; }
 	}
 
 	[Serializable]
 	public class ColumnDefinition {
-		[field: SerializeField] public GridLayout.CellSizeUnit Unit { get; internal set; }
-		[field: SerializeField, Min (0)] public float Width { get; internal set; }
+		[SerializeField] private GridLayout.CellSizeUnit unit;
+		[SerializeField, Min (0)] private float width;
+
+		public GridLayout.CellSizeUnit Unit { get => unit; internal set => unit = value; }
+		public float Width { get => width; internal set => width = value; }
 	}
 }

@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.Grid {
 	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform))]
-	public sealed class GridCell : UIBehaviour, ILayoutSelfController {
+	public sealed class GridCell : MonoBehaviour, ILayoutSelfController {
 
 		private GridLayout grid;
 		private RectTransform rt;
@@ -67,15 +67,14 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 
+
+		private void OnValidate () {
+			UpdateCell ();
+		}
+
 		internal void UpdateCell () {
 			SetLayoutHorizontal ();
 			SetLayoutVertical ();
-		}
-
-
-		protected override void OnValidate () {
-			base.OnValidate ();
-			UpdateCell ();
 		}
 
 		private bool TryGetGrid (out GridLayout grid) {
