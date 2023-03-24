@@ -54,6 +54,9 @@ namespace Zenvin.UI.Components.Grid {
 		/// <param name="cell"> The index of the cell's column and row. </param>
 		/// <param name="span"> The number of columns and rows that the cell spans. </param>
 		public Rect GetRect (Vector2Int cell, Vector2Int span) {
+			if (columnSizes == null || rowSizes == null) {
+				UpdateGrid ();
+			}
 			return GetRect (cell, span, columnSizes, rowSizes);
 		}
 
@@ -62,7 +65,7 @@ namespace Zenvin.UI.Components.Grid {
 				return new Rect();
 			}
 			if (columnValues == null || rowValues == null) {
-				UpdateGrid ();
+				return new Rect ();
 			}
 			if (cell.x < 0 || cell.x >= columnValues.Length || cell.y < 0 || cell.y >= rowValues.Length || span.x <= 0 || span.y <= 0) {
 				return new Rect ();

@@ -72,6 +72,7 @@ namespace Zenvin.UI.Components.Grid {
 			UpdateCell ();
 		}
 
+		
 		internal void UpdateCell () {
 			SetLayoutHorizontal ();
 			SetLayoutVertical ();
@@ -88,15 +89,6 @@ namespace Zenvin.UI.Components.Grid {
 			}
 			grid = null;
 			return false;
-		}
-
-		private bool TryGetRectTransform (out RectTransform rt) {
-			if (this.rt != null) {
-				rt = this.rt;
-				return true;
-			}
-			rt = transform as RectTransform;
-			return rt != null;
 		}
 
 		private bool TryGetRect (out Rect rect) {
