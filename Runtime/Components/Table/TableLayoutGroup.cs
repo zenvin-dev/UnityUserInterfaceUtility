@@ -4,16 +4,16 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Zenvin.UI.Layout;
-
-using static Zenvin.UI.Layout.LayoutUtility;
 using static UnityEngine.DrivenTransformProperties;
+using static Zenvin.UI.Layout.LayoutUtility;
 
 namespace Zenvin.UI.Components.Table {
-	[RequireComponent(typeof(RectTransform)), ExecuteAlways]
+	[RequireComponent (typeof (RectTransform)), ExecuteAlways]
 	public class TableLayoutGroup : UIBehaviour, ILayoutGroup, ILayoutElement {
 
 		private readonly List<TableElement> rowObjects = new List<TableElement> ();
 
+		private Coroutine updateCoroutine;
 		private float[] columnSizes;
 		private Vector2 totalMinSize;
 		private Vector2 totalPreferredSize;
@@ -38,6 +38,11 @@ namespace Zenvin.UI.Components.Table {
 		int ILayoutElement.layoutPriority => 0;
 
 
+		public void ForceUpdateLayout () {
+			SetDirty ();
+		}
+
+
 		protected override void OnDidApplyAnimationProperties () {
 			SetDirty ();
 		}
@@ -54,15 +59,24 @@ namespace Zenvin.UI.Components.Table {
 		}
 
 
-		public void CalculateLayoutInputHorizontal () {
+		void ILayoutElement.CalculateLayoutInputHorizontal () {
 			UpdateRectChildren ();
 		}
 
-		public void CalculateLayoutInputVertical () {
+		void ILayoutElement.CalculateLayoutInputVertical () {
 			// interface method
 		}
 
-		public void SetLayoutHorizontal () {
+		void ILayoutController.SetLayoutHorizontal () {
+			UpdateLayoutHorizontal ();
+		}
+
+		void ILayoutController.SetLayoutVertical () {
+			UpdateLayoutVertical ();
+		}
+
+
+		private void UpdateLayoutHorizontal () {
 			Vector2 size = GroupRectTransform.rect.size;
 			CalculateColumnWidths (columns, size, ref columnSizes);
 
@@ -82,13 +96,12 @@ namespace Zenvin.UI.Components.Table {
 						continue;
 					}
 
-					offset += SetChildAlongAxisWithScale (child, 0, offset, columnSizes[j]);
-					SetChildAlongAxisWithScale (child, 1, 0f);
+					offset += SetChildAlongAxisWithScale (child, 0, offset, columnSizes[j], 1f, true, false);
 				}
 			}
 		}
 
-		public void SetLayoutVertical () {
+		private void UpdateLayoutVertical () {
 			float offset = 0f;
 			for (int i = 0; i < rowObjects.Count; i++) {
 				var el = rowObjects[i];
@@ -103,15 +116,22 @@ namespace Zenvin.UI.Components.Table {
 			totalPreferredSize = new Vector2 (GroupRectTransform.rect.width, offset);
 		}
 
-		private float SetChildAlongAxisWithScale (RectTransform rect, int axis, float pos, float? size = null, float scale = 1f) {
+		private float SetChildAlongAxisWithScale (RectTransform rect, int axis, float pos, float? size = null, float scale = 1f, bool controlAnchorX = true, bool controlAnchorY = true) {
 			if (rect == null || (axis != 0 && axis != 1)) {
 				return 0f;
 			}
 
-			tracker.Add (this, rect, Anchors | (axis == 0 ? AnchoredPositionX | (size.HasValue ? SizeDeltaX : 0) : AnchoredPositionY | (size.HasValue ? SizeDeltaY : 0)));
+			tracker.Add (
+				this,
+				rect,
+				(controlAnchorX ? AnchorMinX | AnchorMaxX : 0) |
+				(controlAnchorY ? AnchorMinY | AnchorMaxY : 0) |
+				(axis == 0 ? AnchoredPositionX | (size.HasValue ? SizeDeltaX : 0) : AnchoredPositionY |
+				(size.HasValue ? SizeDeltaY : 0))
+			);
 
-			rect.anchorMin = Vector2.up;
-			rect.anchorMax = Vector2.up;
+			rect.anchorMin = GetManipulatedVector (rect.anchorMin, Vector2.up, controlAnchorX, controlAnchorY);
+			rect.anchorMax = GetManipulatedVector (rect.anchorMax, Vector2.up, controlAnchorX, controlAnchorY);
 
 			if (size.HasValue) {
 				Vector2 sizeDelta = rect.sizeDelta;
@@ -126,6 +146,16 @@ namespace Zenvin.UI.Components.Table {
 			rect.anchoredPosition = anchoredPosition;
 
 			return size.Value;
+		}
+
+		private Vector3 GetManipulatedVector (Vector2 original, Vector2 target, bool changeX, bool changeY) {
+			if (changeX) {
+				original.x = target.x;
+			}
+			if (changeY) {
+				original.y = target.y;
+			}
+			return original;
 		}
 
 		private void UpdateRectChildren () {
@@ -180,8 +210,8 @@ namespace Zenvin.UI.Components.Table {
 			}
 			if (!CanvasUpdateRegistry.IsRebuildingLayout ()) {
 				LayoutRebuilder.MarkLayoutForRebuild (GroupRectTransform);
-			} else {
-				StartCoroutine (DoDelayedLayoutUpdate (GroupRectTransform));
+			} else if (updateCoroutine == null) {
+				updateCoroutine = StartCoroutine (DoDelayedLayoutUpdate (GroupRectTransform));
 			}
 		}
 
@@ -189,9 +219,22 @@ namespace Zenvin.UI.Components.Table {
 		private IEnumerator DoDelayedLayoutUpdate (RectTransform rt) {
 			yield return null;
 			LayoutRebuilder.MarkLayoutForRebuild (rt);
+			updateCoroutine = null;
 		}
 
 #if UNITY_EDITOR
+		private void Update () {
+			if (Application.isPlaying) {
+				return;
+			}
+
+			int count = rowObjects.Count;
+			UpdateRectChildren ();
+			if (count != rowObjects.Count) {
+				SetDirty ();
+			}
+		}
+
 		protected override void OnValidate () {
 			base.OnValidate ();
 			SetDirty ();
@@ -211,7 +254,7 @@ namespace Zenvin.UI.Components.Table {
 
 			public TableElement (RectTransform row, int columnCount) {
 				Row = row;
-				Columns = new List<RectTransform>(columnCount);
+				Columns = new List<RectTransform> (columnCount);
 			}
 		}
 	}
