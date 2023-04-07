@@ -67,7 +67,6 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 
-
 		private void OnValidate () {
 			UpdateCell ();
 		}
