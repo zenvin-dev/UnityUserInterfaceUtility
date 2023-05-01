@@ -27,7 +27,7 @@ namespace Zenvin.UI.Components.Grid {
 		public int RowCount => rows.Count;
 		public int ColumnCount => columns.Count;
 		public Vector2 Spacing { get => spacing; set => spacing = value; }
-		
+
 		internal List<RowDefinition> Rows => rows;
 		internal List<ColumnDefinition> Columns => columns;
 
@@ -126,12 +126,8 @@ namespace Zenvin.UI.Components.Grid {
 				size.y += rowValues[i];
 			}
 
-			if (span.x == columnValues.Length) {
-				size.x += Spacing.x;
-			}
-			if (span.y == rowValues.Length) {
-				size.y += Spacing.y;
-			}
+			size.x += Spacing.x * (span.x - 1);
+			size.y += Spacing.y * (span.y - 1);
 
 			return new Rect (position, size);
 		}

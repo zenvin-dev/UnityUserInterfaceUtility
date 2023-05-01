@@ -18,7 +18,7 @@ namespace Zenvin.UI.Layout {
 				return;
 			}
 
-			spacing = Mathf.Abs (spacing) * (rows.Count - 1);
+			spacing = spacing * (rows.Count - 1);
 			totalSize.y -= spacing;
 			minSize += spacing;
 
@@ -66,7 +66,7 @@ namespace Zenvin.UI.Layout {
 				return;
 			}
 
-			spacing = Mathf.Abs (spacing) * (columns.Count - 1);
+			spacing = spacing * (columns.Count - 1);
 			totalSize.x -= spacing;
 			minSize += spacing;
 
