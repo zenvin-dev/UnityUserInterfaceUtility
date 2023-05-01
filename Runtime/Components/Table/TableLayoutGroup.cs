@@ -78,7 +78,7 @@ namespace Zenvin.UI.Components.Table {
 
 		private void UpdateLayoutHorizontal () {
 			Vector2 size = GroupRectTransform.rect.size;
-			CalculateColumnWidths (columns, size, ref columnSizes);
+			CalculateColumnWidths (columns, size, 0f, ref columnSizes);
 
 			for (int i = 0; i < rowObjects.Count; i++) {
 				var el = rowObjects[i];

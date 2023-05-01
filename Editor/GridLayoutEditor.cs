@@ -32,8 +32,8 @@ namespace Zenvin.UI.Components.Grid {
 			
 			EditorGUI.DrawRect (editorRect, Color.gray);
 
-			LayoutUtility.CalculateColumnWidths (grid.Columns, editorRect.size, ref columnSizes, editorScale);
-			LayoutUtility.CalculateRowHeights (grid.Rows, editorRect.size, ref rowSizes, editorScale);
+			LayoutUtility.CalculateColumnWidths (grid.Columns, editorRect.size, grid.Spacing.x, ref columnSizes, editorScale);
+			LayoutUtility.CalculateRowHeights (grid.Rows, editorRect.size, grid.Spacing.y, ref rowSizes, editorScale);
 
 			for (int i = 0; i < grid.ColumnCount; i++) {
 				var rect = grid.GetRect (new Vector2Int(i, 0), new Vector2Int(1, grid.RowCount), columnSizes, rowSizes);

@@ -1,28 +1,64 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Zenvin.UI.Layout;
 
 using static Zenvin.UI.Layout.LayoutUtility;
 
 namespace Zenvin.UI.Components.Grid {
-	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform))]
-	public sealed class GridLayout : LayoutGroup {
+	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform)), ExecuteAlways]
+	public sealed class GridLayout : UIBehaviour, ILayoutGroup, ILayoutElement {
 
 		private readonly List<Tuple<GridCell, Rect>> childCells = new List<Tuple<GridCell, Rect>> ();
+		private RectTransform gridRectTransform;
 		private float[] rowSizes;
 		private float[] columnSizes;
+		private Vector2 minSize;
+		private Coroutine updateCoroutine;
 
+		[SerializeField] private Vector2 spacing;
 		[SerializeField] private List<RowDefinition> rows;
 		[SerializeField] private List<ColumnDefinition> columns;
 
 
 		public int RowCount => rows.Count;
 		public int ColumnCount => columns.Count;
-
+		public Vector2 Spacing { get => spacing; set => spacing = value; }
+		
 		internal List<RowDefinition> Rows => rows;
 		internal List<ColumnDefinition> Columns => columns;
+
+		internal RectTransform GridRectTransform => gridRectTransform == null ? (gridRectTransform = transform as RectTransform) : gridRectTransform;
+
+		float ILayoutElement.minWidth => minSize.x;
+		float ILayoutElement.preferredWidth => minSize.x;
+		float ILayoutElement.flexibleWidth => minSize.x;
+		float ILayoutElement.minHeight => minSize.y;
+		float ILayoutElement.preferredHeight => minSize.y;
+		float ILayoutElement.flexibleHeight => minSize.y;
+		int ILayoutElement.layoutPriority => 0;
+
+
+		public void ForceUpdateLayout () {
+			SetDirty ();
+		}
+
+		protected override void OnDidApplyAnimationProperties () {
+			SetDirty ();
+		}
+
+		protected override void OnEnable () {
+			base.OnEnable ();
+			SetDirty ();
+		}
+
+		protected override void OnDisable () {
+			LayoutRebuilder.MarkLayoutForRebuild (GridRectTransform);
+			base.OnDisable ();
+		}
 
 
 		/// <summary>
@@ -62,7 +98,7 @@ namespace Zenvin.UI.Components.Grid {
 
 		internal Rect GetRect (Vector2Int cell, Vector2Int span, float[] columnValues, float[] rowValues) {
 			if (columns == null || rows == null) {
-				return new Rect();
+				return new Rect ();
 			}
 			if (columnValues == null || rowValues == null) {
 				return new Rect ();
@@ -76,15 +112,25 @@ namespace Zenvin.UI.Components.Grid {
 
 			for (int i = 0; i < cell.x; i++) {
 				position.x += columnValues[i];
+				position.x += Spacing.x;
 			}
 			for (int i = 0; i < cell.y; i++) {
 				position.y += rowValues[i];
+				position.y += Spacing.y;
 			}
+
 			for (int i = cell.x; i < Mathf.Min (cell.x + span.x, columnValues.Length); i++) {
 				size.x += columnValues[i];
 			}
 			for (int i = cell.y; i < Mathf.Min (cell.y + span.y, rowValues.Length); i++) {
 				size.y += rowValues[i];
+			}
+
+			if (span.x == columnValues.Length) {
+				size.x += Spacing.x;
+			}
+			if (span.y == rowValues.Length) {
+				size.y += Spacing.y;
 			}
 
 			return new Rect (position, size);
@@ -143,13 +189,6 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 
-		private void UpdateGrid () {
-			Vector2 totalSize = GetRectSize ();
-
-			CalculateRowHeights (rows, totalSize, ref rowSizes);
-			CalculateColumnWidths (columns, totalSize, ref columnSizes);
-		}
-
 		internal Vector2 GetRectSize () {
 			RectTransform rt = transform as RectTransform;
 			Vector2 size = rt.rect.size;
@@ -157,17 +196,44 @@ namespace Zenvin.UI.Components.Grid {
 		}
 
 
-		public override void CalculateLayoutInputHorizontal () {
-			CalculateColumnWidths (columns, GetRectSize (), ref columnSizes);
-			SetLayoutHorizontal ();
+		private void UpdateGrid () {
+			Vector2 totalSize = GetRectSize ();
+
+			CalculateRowHeights (rows, totalSize, Spacing.y, ref rowSizes);
+			CalculateColumnWidths (columns, totalSize, Spacing.x, ref columnSizes);
 		}
 
-		public override void CalculateLayoutInputVertical () {
-			CalculateRowHeights (rows, GetRectSize (), ref rowSizes);
-			SetLayoutVertical ();
+		private void SetDirty () {
+			if (!IsActive ()) {
+				return;
+			}
+			if (!CanvasUpdateRegistry.IsRebuildingLayout ()) {
+				LayoutRebuilder.MarkLayoutForRebuild (GridRectTransform);
+			} else if (updateCoroutine == null) {
+				updateCoroutine = StartCoroutine (DoDelayedLayoutUpdate (GridRectTransform));
+			}
 		}
 
-		public override void SetLayoutHorizontal () {
+		private IEnumerator DoDelayedLayoutUpdate (RectTransform rt) {
+			yield return null;
+			LayoutRebuilder.MarkLayoutForRebuild (rt);
+			updateCoroutine = null;
+		}
+
+
+		void ILayoutElement.CalculateLayoutInputHorizontal () {
+			float minWidth = 0f;
+			CalculateColumnWidths (columns, GetRectSize (), Spacing.x, ref columnSizes, ref minWidth);
+			minSize.x = minWidth;
+		}
+
+		void ILayoutElement.CalculateLayoutInputVertical () {
+			float minHeight = 0f;
+			CalculateRowHeights (rows, GetRectSize (), Spacing.y, ref rowSizes, ref minHeight);
+			minSize.y = minHeight;
+		}
+
+		void ILayoutController.SetLayoutHorizontal () {
 			childCells.Clear ();
 			foreach (Transform child in transform) {
 				if (child.TryGetComponent (out GridCell cell)) {
@@ -179,10 +245,25 @@ namespace Zenvin.UI.Components.Grid {
 			}
 		}
 
-		public override void SetLayoutVertical () {
+		void ILayoutController.SetLayoutVertical () {
 			foreach (var cell in childCells) {
 				cell.Item1.SetLayoutVertical (cell.Item2);
 			}
 		}
+
+
+#if UNITY_EDITOR
+		private void Update () {
+			if (Application.isPlaying) {
+				return;
+			}
+			SetDirty ();
+		}
+
+		protected override void OnValidate () {
+			base.OnValidate ();
+			SetDirty ();
+		}
+#endif
 	}
 }
