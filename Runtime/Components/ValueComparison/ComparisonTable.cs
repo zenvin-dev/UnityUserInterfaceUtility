@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.ValueComparison {
+	[AddComponentMenu("UI/Zenvin/Comparison Table", 0)]
 	public class ComparisonTable : MonoBehaviour {
 
 		private readonly List<ComparisonTableRow> rows = new List<ComparisonTableRow> ();

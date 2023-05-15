@@ -3,7 +3,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.Grid {
-	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform))]
+	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform)), AddComponentMenu("UI/Zenvin/Grid Cell", 0)]
 	public sealed class GridCell : MonoBehaviour, ILayoutSelfController {
 
 		private GridLayout grid;

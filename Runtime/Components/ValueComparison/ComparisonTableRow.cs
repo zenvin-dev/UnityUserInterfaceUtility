@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.ValueComparison {
+	[AddComponentMenu ("UI/Zenvin/Comparison Table Row", 0)]
 	public class ComparisonTableRow : MonoBehaviour {
 
 		[SerializeField] private TextMeshProUGUI labelText;

@@ -8,7 +8,7 @@ using static UnityEngine.DrivenTransformProperties;
 using static Zenvin.UI.Layout.LayoutUtility;
 
 namespace Zenvin.UI.Components.Table {
-	[RequireComponent (typeof (RectTransform)), ExecuteAlways]
+	[RequireComponent (typeof (RectTransform)), ExecuteAlways, AddComponentMenu ("UI/Zenvin/Table Layout", 0)]
 	public class TableLayoutGroup : UIBehaviour, ILayoutGroup, ILayoutElement {
 
 		private readonly List<TableElement> rowObjects = new List<TableElement> ();

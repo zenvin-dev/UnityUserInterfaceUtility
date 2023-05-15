@@ -9,7 +9,7 @@ using Zenvin.UI.Layout;
 using static Zenvin.UI.Layout.LayoutUtility;
 
 namespace Zenvin.UI.Components.Grid {
-	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform)), ExecuteAlways]
+	[DisallowMultipleComponent, RequireComponent (typeof (RectTransform)), ExecuteAlways, AddComponentMenu("UI/Zenvin/Grid Layout", 0)]
 	public sealed class GridLayout : UIBehaviour, ILayoutGroup, ILayoutElement {
 
 		private readonly List<Tuple<GridCell, Rect>> childCells = new List<Tuple<GridCell, Rect>> ();

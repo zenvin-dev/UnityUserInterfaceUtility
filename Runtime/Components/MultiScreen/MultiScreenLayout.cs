@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using static UnityEngine.DrivenTransformProperties;
 
 namespace Zenvin.UI.MultiScreen {
-	[RequireComponent (typeof (RectTransform)), DisallowMultipleComponent, ExecuteAlways]
+	[RequireComponent (typeof (RectTransform)), DisallowMultipleComponent, ExecuteAlways, AddComponentMenu("UI/Zenvin/Multi-Screen Layout", 0)]
 	public class MultiScreenLayout : UIBehaviour, ILayoutGroup {
 
 		private Vector2Int currentCell = Vector2Int.one * -1;
