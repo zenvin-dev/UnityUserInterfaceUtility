@@ -2,15 +2,61 @@ using UnityEditor;
 using UnityEngine;
 
 namespace Zenvin.UI {
-	[CustomEditor (typeof (UserInterfaceWidget), false), CanEditMultipleObjects]
+	[CustomEditor (typeof (UserInterfaceWidget), false)]
 	internal class UserInterfaceWidgetEditor : Editor {
-		
+
+		internal static readonly float ButtonSize = EditorGUIUtility.singleLineHeight;
+
+		private static GUIContent warningContent;
+		internal static GUIContent WarningContent {
+			get {
+				if (warningContent == null) {
+					warningContent = EditorGUIUtility.IconContent ("Warning");
+					warningContent.tooltip = "Invalid Identifier";
+				}
+				return warningContent;
+			}
+		}
+
+
+		public override void OnInspectorGUI () {
+
+			GUILayout.BeginHorizontal ();
+			EditorGUILayout.PrefixLabel ("Identifier");
+			DrawIdentifierProperty (serializedObject.FindProperty ("identifier"), (target as UserInterfaceWidget).Valid, false);
+			GUILayout.EndHorizontal ();
+
+			EditorGUILayout.PropertyField (serializedObject.FindProperty ("registerPolicy"), new GUIContent ("Register Policy"));
+			EditorGUILayout.PropertyField (serializedObject.FindProperty ("unregisterPolicy"), new GUIContent ("Unregister Policy"));
+
+			var autoOrderProp = serializedObject.FindProperty ("useAutoOrder");
+			EditorGUILayout.PropertyField (autoOrderProp, new GUIContent ("Use Auto-Order"));
+			EditorGUI.BeginDisabledGroup (autoOrderProp.boolValue);
+			EditorGUILayout.PropertyField (serializedObject.FindProperty ("order"), new GUIContent ("Order"));
+			EditorGUI.EndDisabledGroup ();
+
+			serializedObject.ApplyModifiedProperties ();
+		}
+
+		internal static void DrawIdentifierProperty (SerializedProperty prop, bool valid, bool placeholderSpace = true) {
+			if (prop == null) {
+				return;
+			}
+
+			EditorGUILayout.PropertyField (prop, GUIContent.none, GUILayout.ExpandWidth (true));
+
+			if (!valid) {
+				GUILayout.Box (WarningContent, EditorStyles.label, GUILayout.Height (ButtonSize), GUILayout.Width (ButtonSize));
+			} else if (placeholderSpace) {
+				GUILayout.Space (EditorGUIUtility.singleLineHeight + EditorStyles.label.margin.left);
+			}
+		}
+
 	}
 
 	[InitializeOnLoad]
 	internal static class UserInterfaceWidgetEditorHeader {
 
-		private static readonly float ButtonSize = EditorGUIUtility.singleLineHeight;
 
 		private static GUIContent menuContent;
 		private static GUIContent MenuContent {
@@ -22,16 +68,7 @@ namespace Zenvin.UI {
 			}
 		}
 
-		private static GUIContent warningContent;
-		private static GUIContent WarningContent {
-			get {
-				if (warningContent == null) {
-					warningContent = EditorGUIUtility.IconContent ("Warning");
-					warningContent.tooltip = "Invalid Identifier";
-				}
-				return warningContent;
-			}
-		}
+
 
 		private static GUIContent selectContent;
 		private static GUIContent SelectContent {
@@ -124,19 +161,15 @@ namespace Zenvin.UI {
 		}
 
 		private static bool DrawHeaderControls (SerializedObject obj, UserInterfaceWidget widget) {
-			bool repaint = false;
+			var repaint = false;
+			var prop = obj.FindProperty ("identifier");
+			var buttonSize = UserInterfaceWidgetEditor.ButtonSize;
 
 			GUILayout.Label (new GUIContent ("Widget", "A string by which this User Interface Widget will be identified."), GUILayout.ExpandWidth (false));
-			EditorGUILayout.PropertyField (obj.FindProperty ("identifier"), GUIContent.none, GUILayout.ExpandWidth (true));
+			UserInterfaceWidgetEditor.DrawIdentifierProperty (prop, widget.Valid);
 
-			if (!widget.Valid) {
-				GUILayout.Box (WarningContent, EditorStyles.label, GUILayout.Height (ButtonSize), GUILayout.Width (ButtonSize));
-			} else {
-				GUILayout.Space (EditorGUIUtility.singleLineHeight + EditorStyles.label.margin.left);
-			}
-
-			bool expanded = widget.hideFlags == HideFlags.None;
-			if (GUILayout.Button (expanded ? DropdownContentExpanded : DropdownContentFolded, EditorStyles.label, GUILayout.Height (ButtonSize), GUILayout.Width (ButtonSize))) {
+			bool expanded = (widget.hideFlags & HideFlags.HideInInspector) == 0;
+			if (GUILayout.Button (expanded ? DropdownContentExpanded : DropdownContentFolded, EditorStyles.label, GUILayout.Height (buttonSize), GUILayout.Width (buttonSize))) {
 				widget.hideFlags = expanded ? HideFlags.HideInInspector : HideFlags.None;
 				repaint = true;
 			}
@@ -153,10 +186,10 @@ namespace Zenvin.UI {
 		}
 
 		private static void DrawAdditionalProperties (SerializedObject obj) {
-			GUILayout.Label ("Register", GUILayout.ExpandWidth(false));
+			GUILayout.Label ("Register", GUILayout.ExpandWidth (false));
 			EditorGUILayout.PropertyField (obj.FindProperty ("registerPolicy"), GUIContent.none);
 			GUILayout.FlexibleSpace ();
-			GUILayout.Label ("Unregister", GUILayout.ExpandWidth(false));
+			GUILayout.Label ("Unregister", GUILayout.ExpandWidth (false));
 			EditorGUILayout.PropertyField (obj.FindProperty ("unregisterPolicy"), GUIContent.none);
 			GUILayout.FlexibleSpace ();
 			GUILayout.Label ("Order", GUILayout.ExpandWidth (false));
