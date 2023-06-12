@@ -24,10 +24,11 @@ namespace Zenvin.UI.Components.Table {
 		[SerializeField] private float rowSpacing = 0f;
 		[SerializeField] private List<ColumnDefinition> columns = new List<ColumnDefinition> ();
 		[SerializeField, Tooltip ("Will ignore children whose (layout-influenced) child count does not equal the number of columns.")] private bool ignoreMismatchedRows = true;
+		[field: SerializeField, Tooltip ("Override the transform of the header row to achieve a different layout.")] public RectTransform HeaderOverride { get; set; }
 
 
 		public int ColumnCount => columns.Count;
-		public RectTransform GroupRectTransform => rectTransform == null ? (rectTransform = transform as RectTransform) : rectTransform;
+		public RectTransform GroupRectTransform => GetContentTransform ();
 
 		float ILayoutElement.minWidth => totalMinSize.x;
 		float ILayoutElement.preferredWidth => totalPreferredSize.x;
@@ -81,23 +82,31 @@ namespace Zenvin.UI.Components.Table {
 			CalculateColumnWidths (columns, size, 0f, ref columnSizes);
 
 			for (int i = 0; i < rowObjects.Count; i++) {
-				var el = rowObjects[i];
+				UpdateLayoutHorizontal (rowObjects[i], size);
+			}
 
-				if (el.Row == null) {
+			if (TryCreateTableElement (HeaderOverride, out TableElement? element)) {
+				UpdateLayoutHorizontal (element.Value, size, false);
+			}
+		}
+
+		private void UpdateLayoutHorizontal (TableElement element, Vector2 size, bool updateParent = true) {
+			if (element.Row == null) {
+				return;
+			}
+
+			if (updateParent) {
+				SetChildAlongAxisWithScale (element.Row, 0, 0f, size.x);
+			}
+
+			float offset = 0f;
+			for (int j = 0; j < element.Columns.Count && j < ColumnCount; j++) {
+				var child = element.Columns[j];
+				if (child == null) {
 					continue;
 				}
 
-				SetChildAlongAxisWithScale (el.Row, 0, 0f, size.x);
-
-				float offset = 0f;
-				for (int j = 0; j < el.Columns.Count; j++) {
-					var child = el.Columns[j];
-					if (child == null) {
-						continue;
-					}
-
-					offset += SetChildAlongAxisWithScale (child, 0, offset, columnSizes[j], 1f, true, false);
-				}
+				offset += SetChildAlongAxisWithScale (child, 0, offset, columnSizes[j], 1f, true, false);
 			}
 		}
 
@@ -113,6 +122,7 @@ namespace Zenvin.UI.Components.Table {
 				offset += SetChildAlongAxisWithScale (el.Row, 1, offset) + rowSpacing;
 			}
 
+			offset -= rowSpacing;
 			totalPreferredSize = new Vector2 (GroupRectTransform.rect.width, offset);
 		}
 
@@ -161,47 +171,55 @@ namespace Zenvin.UI.Components.Table {
 		private void UpdateRectChildren () {
 			rowObjects.Clear ();
 
-			int childCount = transform.childCount;
+			int childCount = GroupRectTransform.childCount;
 			for (int i = 0; i < childCount; i++) {
-
-				var rect = transform.GetChild (i) as RectTransform;
+				var rect = GroupRectTransform.GetChild (i) as RectTransform;
 				if (rect == null || !rect.gameObject.activeInHierarchy) {
 					continue;
 				}
 
-				if (rect.TryGetComponent (out ILayoutIgnorer ignorer) && ignorer.ignoreLayout) {
-					continue;
-				}
-
-				var subChildCount = rect.childCount;
-				if (ignoreMismatchedRows && subChildCount < ColumnCount) {
-					continue;
-				}
-
-				var element = new TableElement (rect);
-				for (int j = 0; j < subChildCount; j++) {
-					if (element.Columns.Count >= ColumnCount) {
-						break;
-					}
-
-					var cellRect = rect.GetChild (j) as RectTransform;
-					if (cellRect == null || !cellRect.gameObject.activeInHierarchy) {
-						continue;
-					}
-
-					if (cellRect.TryGetComponent (out ignorer) && ignorer.ignoreLayout) {
-						continue;
-					}
-
-					element.Columns.Add (cellRect);
-				}
-
-				if (element.Columns.Count == ColumnCount || !ignoreMismatchedRows) {
-					rowObjects.Add (element);
+				if (TryCreateTableElement(rect, out TableElement? element)) {
+					rowObjects.Add (element.Value);
 				}
 			}
 
 			tracker.Clear ();
+		}
+
+		private bool TryCreateTableElement (RectTransform parent, out TableElement? element) {
+			element = null;
+			if (parent == null) {
+				return false;
+			}
+
+			int childCount = parent.childCount;
+			if (childCount == 0) {
+				return false;
+			}
+
+			if (parent.TryGetComponent (out ILayoutIgnorer ignorer) && ignorer.ignoreLayout) {
+				return false;
+			}
+
+			var el = new TableElement (parent);
+			for (int j = 0; j < childCount; j++) {
+				var cellRect = parent.GetChild (j) as RectTransform;
+				if (cellRect == null || !cellRect.gameObject.activeInHierarchy) {
+					continue;
+				}
+
+				if (cellRect.TryGetComponent (out ignorer) && ignorer.ignoreLayout) {
+					continue;
+				}
+
+				el.Columns.Add (cellRect);
+			}
+
+			if (el.Columns.Count == ColumnCount || !ignoreMismatchedRows) {
+				element = el;
+				return true;
+			}
+			return false;
 		}
 
 		private void SetDirty () {
@@ -213,6 +231,13 @@ namespace Zenvin.UI.Components.Table {
 			} else if (updateCoroutine == null) {
 				updateCoroutine = StartCoroutine (DoDelayedLayoutUpdate (GroupRectTransform));
 			}
+		}
+
+		private RectTransform GetContentTransform () {
+			if (rectTransform != null) {
+				return rectTransform;
+			}
+			return (rectTransform = transform as RectTransform);
 		}
 
 
