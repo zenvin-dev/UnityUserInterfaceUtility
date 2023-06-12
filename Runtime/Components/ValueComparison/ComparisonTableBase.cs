@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Zenvin.UI.Components.ValueComparison {
 	public abstract class ComparisonTableBase : MonoBehaviour {
@@ -10,7 +9,7 @@ namespace Zenvin.UI.Components.ValueComparison {
 
 		[field: SerializeField] public TextMeshProUGUI LeftHeaderText { get; private set; }
 		[field: SerializeField] public TextMeshProUGUI RightHeaderText { get; private set; }
-		[field: Space, SerializeField] public VerticalLayoutGroup RowParent { get; private set; }
+		[field: Space, SerializeField] public Transform RowParent { get; private set; }
 		[field: SerializeField] public ComparisonTableRow RowPrefab { get; private set; }
 
 
@@ -57,7 +56,7 @@ namespace Zenvin.UI.Components.ValueComparison {
 			ComparisonTableRow row;
 			if (at >= rows.Count) {
 				row = Instantiate (RowPrefab);
-				row.transform.SetParent (RowParent.transform);
+				row.transform.SetParent (RowParent);
 				row.transform.localScale = Vector3.one;
 				rows.Add (row);
 			} else {
