@@ -227,12 +227,7 @@ namespace Zenvin.UI.Components.Table {
 			if (Application.isPlaying) {
 				return;
 			}
-
-			int count = rowObjects.Count;
-			UpdateRectChildren ();
-			if (count != rowObjects.Count) {
-				SetDirty ();
-			}
+			SetDirty ();
 		}
 
 		protected override void OnValidate () {
