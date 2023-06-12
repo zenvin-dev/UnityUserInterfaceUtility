@@ -136,7 +136,7 @@ namespace Zenvin.UI.Components.ValueComparison {
 
 		private static string GetFormattedString (object value, string nullReplacement, string formatter, IFormatProvider formatProvider) {
 			if (value == null) {
-				return "-";
+				return nullReplacement;
 			}
 
 			if (value is IFormattable format && formatProvider != null) {
