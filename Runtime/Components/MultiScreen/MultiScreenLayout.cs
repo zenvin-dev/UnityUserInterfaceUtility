@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using static UnityEngine.DrivenTransformProperties;
 
-namespace Zenvin.UI.MultiScreen {
+namespace Zenvin.UI.Components.MultiScreen {
 	[RequireComponent (typeof (RectTransform)), DisallowMultipleComponent, ExecuteAlways, AddComponentMenu("UI/Zenvin/Multi-Screen Layout", 0)]
 	public class MultiScreenLayout : UIBehaviour, ILayoutGroup {
 
